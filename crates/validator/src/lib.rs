@@ -18,3 +18,6 @@ pub mod state_root_strategy;
 
 /// Flashblock validation with parallel execution support.
 pub mod validator;
+
+/// Immutable executed prefix publication.
+pub mod executed_prefix;

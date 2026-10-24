@@ -508,7 +508,11 @@ where
                     flashblocks_components_ctx.flashblocks_state.pending_block()
                 });
         let flashblocks_eth_api_builder =
-            FlashblocksEthApiBuilder::new(op_eth_api_builder, maybe_pending_block);
+            FlashblocksEthApiBuilder::new(op_eth_api_builder, maybe_pending_block).with_prefixes(
+                self.components_context
+                    .as_ref()
+                    .map(|ctx| ctx.flashblocks_state.executed_prefixes()),
+            );
 
         let engine_validator_builder =
             BasicEngineValidatorBuilder::<OpEngineValidatorBuilder>::default();
@@ -536,6 +540,13 @@ where
                 .as_ref()
                 .map(|w| (w.cache.clone(), w.receiver.clone())),
         )
+        .extend_rpc_modules(|ctx| {
+            ctx.modules.merge_if_module_configured(
+                reth_rpc_server_types::RethRpcModule::Eth,
+                ctx.registry.eth_api().macabim_module()?,
+            )?;
+            Ok(())
+        })
     }
 
     fn ext_context(&self) -> Self::ExtContext {
