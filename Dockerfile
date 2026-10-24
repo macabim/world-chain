@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.10
-FROM public.ecr.aws/docker/library/rust:1.95.0-bookworm AS base
+FROM docker.io/library/rust:1.95.0-bookworm AS base
 
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
   --mount=type=cache,target=/usr/local/cargo/git \
@@ -68,7 +68,7 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
     cargo build --locked --profile ${PROFILE} --features ${FEATURES} --bin ${WORLD_CHAIN_BUILDER_BIN}
 
 # Deployments depend on sh wget and awscli v2
-FROM public.ecr.aws/docker/library/debian:bookworm-slim AS runtime
+FROM docker.io/library/debian:bookworm-slim AS runtime
 WORKDIR /app
 
 # Install runtime tools and require Debian's eMudhra distrust update.
