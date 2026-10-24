@@ -1,6 +1,17 @@
 name: docker
 
 on:
+  pull_request:
+    paths:
+      - "bin/world-chain/**"
+      - "crates/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "rust-toolchain.toml"
+      - "Dockerfile"
+      - ".github/workflows/docker.yml"
+      - ".github/actions/docker-build-push-digest/**"
+      - ".github/actions/prepare-hosted-runner/**"
   workflow_dispatch:
     inputs:
       ref:
@@ -47,6 +58,7 @@ permissions:
 
 jobs:
   build-and-push:
+    if: github.event_name != 'pull_request' || (github.repository_owner != 'worldcoin' && github.event.pull_request.head.repo.full_name == github.repository)
     name: build and push docker
     environment:
       name: dev

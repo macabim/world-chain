@@ -236,8 +236,8 @@ where
                 let sink = pending.accept().await?;
                 loop {
                     let snapshot = rx.borrow_and_update().clone();
-                    if let Some(snapshot) = snapshot {
-                        if api.validate_snapshot(&snapshot, now_ms().saturating_add(1000)).is_ok() {
+                    if let Some(snapshot) = snapshot
+                        && api.validate_snapshot(&snapshot, now_ms().saturating_add(1000)).is_ok() {
                             let value = notification(api.chain_id().to::<u64>(), &snapshot);
                             let message = serde_json::value::to_raw_value(&value)?;
                             tokio::select! {
@@ -246,7 +246,6 @@ where
                                     if !matches!(sent, Ok(Ok(()))) { break; }
                                 }
                             }
-                        }
                     }
                     tokio::select! { _ = sink.closed() => break, changed = rx.changed() => { if changed.is_err() { break; } } }
                 }
