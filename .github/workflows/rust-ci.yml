@@ -112,7 +112,7 @@ jobs:
     environment:
       name: dev
       deployment: false
-    timeout-minutes: 20
+    timeout-minutes: ${{ github.repository_owner == 'worldcoin' && 20 || 120 }}
     name: clippy
     env:
       RUSTC_WRAPPER: ${{ github.repository_owner == 'worldcoin' && 'sccache' || '' }}
@@ -162,7 +162,7 @@ jobs:
     environment:
       name: dev
       deployment: false
-    timeout-minutes: 20
+    timeout-minutes: ${{ github.repository_owner == 'worldcoin' && 20 || 120 }}
     name: docs
     env:
       RUSTC_WRAPPER: ${{ github.repository_owner == 'worldcoin' && 'sccache' || '' }}

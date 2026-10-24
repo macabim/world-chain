@@ -91,6 +91,7 @@ runs:
       uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
     - name: Configure AWS credentials for S3 caches
+      if: github.repository_owner == 'worldcoin'
       uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
       with:
         aws-region: ${{ inputs.aws_region }}
@@ -106,7 +107,7 @@ runs:
         target: ${{ inputs.target }}
         build-args: |
           VERGEN_GIT_SHA=${{ inputs.git_sha }}
-          SCCACHE_BUCKET=${{ inputs.sccache_bucket }}
+          SCCACHE_BUCKET=${{ github.repository_owner == 'worldcoin' && inputs.sccache_bucket || '' }}
           SCCACHE_REGION=${{ inputs.aws_region }}
           SCCACHE_S3_KEY_PREFIX=sccache/${{ github.repository }}/${{ env.PLATFORM_PAIR }}
           ${{ inputs.build_args }}
@@ -119,9 +120,9 @@ runs:
         labels: ${{ steps.meta.outputs.labels }}
         no-cache-filters: ${{ inputs.no_cache_filters }}
         cache-from: |
-          type=s3,region=${{ inputs.aws_region }},bucket=${{ inputs.sccache_bucket }},prefix=${{ env.BUILDKIT_CACHE_PREFIX }},name=${{ env.CACHE_SCOPE }}
-          type=s3,region=${{ inputs.aws_region }},bucket=${{ inputs.sccache_bucket }},prefix=${{ env.BUILDKIT_CACHE_PREFIX }},name=main
-        cache-to: type=s3,region=${{ inputs.aws_region }},bucket=${{ inputs.sccache_bucket }},prefix=${{ env.BUILDKIT_CACHE_PREFIX }},name=${{ env.CACHE_SCOPE }},mode=max
+          ${{ github.repository_owner == 'worldcoin' && format('type=s3,region={0},bucket={1},prefix={2},name={3}', inputs.aws_region, inputs.sccache_bucket, env.BUILDKIT_CACHE_PREFIX, env.CACHE_SCOPE) || format('type=gha,scope={0}-{1}', env.PLATFORM_PAIR, env.CACHE_SCOPE) }}
+          ${{ github.repository_owner == 'worldcoin' && format('type=s3,region={0},bucket={1},prefix={2},name=main', inputs.aws_region, inputs.sccache_bucket, env.BUILDKIT_CACHE_PREFIX) || format('type=gha,scope={0}-main', env.PLATFORM_PAIR) }}
+        cache-to: ${{ github.repository_owner == 'worldcoin' && format('type=s3,region={0},bucket={1},prefix={2},name={3}', inputs.aws_region, inputs.sccache_bucket, env.BUILDKIT_CACHE_PREFIX, env.CACHE_SCOPE) || format('type=gha,scope={0}-{1}', env.PLATFORM_PAIR, env.CACHE_SCOPE) }},mode=max
         outputs: type=registry,push-by-digest=true,name-canonical=true,push=true
 
     - name: Export digest

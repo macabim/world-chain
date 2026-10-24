@@ -54,7 +54,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - runner: arc-public-8xlarge-amd64-runner
+          - runner: ${{ github.repository_owner == 'worldcoin' && 'arc-public-8xlarge-amd64-runner' || 'ubuntu-latest' }}
             platform: linux/amd64
           - runner: ubuntu-24.04-arm
             platform: linux/arm64
@@ -64,6 +64,9 @@ jobs:
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ inputs.ref }}
+      - name: Prepare hosted runner
+        if: github.repository_owner != 'worldcoin'
+        uses: ./.github/actions/prepare-hosted-runner
       - name: Build and push digest
         uses: ./.github/actions/docker-build-push-digest
         with:
