@@ -1,0 +1,9 @@
+name: Prepare hosted runner
+description: Reserve disk space for the Rust workspace on disposable GitHub-hosted runners.
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: |
+        sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc
+        df -h /

@@ -5,6 +5,7 @@ pub mod transaction;
 
 mod block;
 mod call;
+mod flashblock_simulation;
 mod pending_block;
 
 use std::sync::Arc;
@@ -48,6 +49,7 @@ use tokio::sync::Semaphore;
 pub struct FlashblocksEthApi<N: RpcNodeCore, Rpc: RpcConvert> {
     inner: OpEthApi<N, Rpc>,
     pending_block: Option<tokio::sync::watch::Receiver<Option<ExecutedBlock<OpPrimitives>>>>,
+    prefixes: Option<world_chain_validator::executed_prefix::ExecutedPrefixes>,
 }
 
 impl<N, Rpc> FlashblocksEthApi<N, Rpc>
@@ -62,6 +64,7 @@ where
         Self {
             inner,
             pending_block,
+            prefixes: None,
         }
     }
 }
@@ -285,6 +288,7 @@ where
 pub struct FlashblocksEthApiBuilder<NetworkT = Optimism> {
     inner: OpEthApiBuilder<NetworkT>,
     pending_block: Option<tokio::sync::watch::Receiver<Option<ExecutedBlock<OpPrimitives>>>>,
+    prefixes: Option<world_chain_validator::executed_prefix::ExecutedPrefixes>,
 }
 
 impl<NetworkT> Default for FlashblocksEthApiBuilder<NetworkT> {
@@ -292,11 +296,19 @@ impl<NetworkT> Default for FlashblocksEthApiBuilder<NetworkT> {
         Self {
             inner: OpEthApiBuilder::default(),
             pending_block: None,
+            prefixes: None,
         }
     }
 }
 
 impl<NetworkT> FlashblocksEthApiBuilder<NetworkT> {
+    pub fn with_prefixes(
+        mut self,
+        prefixes: Option<world_chain_validator::executed_prefix::ExecutedPrefixes>,
+    ) -> Self {
+        self.prefixes = prefixes;
+        self
+    }
     /// Creates a [`OpEthApiBuilder`] instance from core components.
     pub const fn new(
         inner: OpEthApiBuilder<NetworkT>,
@@ -305,6 +317,7 @@ impl<NetworkT> FlashblocksEthApiBuilder<NetworkT> {
         Self {
             inner,
             pending_block,
+            prefixes: None,
         }
     }
 }
@@ -335,6 +348,8 @@ where
     async fn build_eth_api(self, ctx: EthApiCtx<'_, N>) -> eyre::Result<Self::EthApi> {
         let inner = self.inner.build_eth_api(ctx).await?;
         let pending_block = self.pending_block;
-        Ok(FlashblocksEthApi::new(inner, pending_block))
+        let mut api = FlashblocksEthApi::new(inner, pending_block);
+        api.prefixes = self.prefixes;
+        Ok(api)
     }
 }

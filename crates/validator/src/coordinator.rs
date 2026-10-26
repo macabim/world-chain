@@ -60,6 +60,7 @@ static SEMAPHORE_TASK_PERMIT: LazyLock<Arc<Semaphore>> =
 pub struct FlashblocksExecutionCoordinator {
     inner: Arc<RwLock<FlashblocksExecutionCoordinatorInner>>,
     p2p_handle: FlashblocksHandle,
+    prefixes: crate::executed_prefix::ExecutedPrefixes,
     pending_block: tokio::sync::watch::Sender<Option<ExecutedBlock<OpPrimitives>>>,
 }
 
@@ -95,6 +96,7 @@ impl FlashblocksExecutionCoordinator {
 
         Self {
             inner,
+            prefixes: Default::default(),
             p2p_handle,
             pending_block,
         }
@@ -188,7 +190,11 @@ impl FlashblocksExecutionCoordinator {
         let pending_block = self.pending_block.clone();
         let pending_block_clone = pending_block.clone();
 
+        let prefixes = self.prefixes.clone();
         let stream = self.map_worldchain_event_stream(provider.clone(), move |event| {
+            if matches!(event, WorldChainEvent::Chain(ChainEvent::Canon(_))) {
+                prefixes.clear();
+            }
             Self::event_hook(event, &pending_block)
         });
 
@@ -238,6 +244,11 @@ impl FlashblocksExecutionCoordinator {
     /// Returns a reference to the latest flashblock.
     pub fn flashblocks(&self) -> Flashblocks {
         self.inner.read().flashblocks.clone()
+    }
+
+    /// Returns the executed prefix cache.
+    pub fn executed_prefixes(&self) -> crate::executed_prefix::ExecutedPrefixes {
+        self.prefixes.clone()
     }
 
     /// Returns a receiver for the pending block.
@@ -430,6 +441,7 @@ where
     // Clear latest_payload on new epoch (brief write lock)
     if is_new_epoch {
         coordinator.inner.write().latest_payload = None;
+        coordinator.prefixes.clear();
     }
 
     let latest_payload = {
@@ -523,7 +535,13 @@ where
     }
 
     let into_executed_block_started = Instant::now();
-    pending_block.send_replace(next_payload.executed_block().map(into_executed_payload));
+    let executed = next_payload.executed_block().map(into_executed_payload);
+    if let Some(block) = &executed {
+        coordinator
+            .prefixes
+            .publish(base, next_payload.id(), index, block.clone());
+    }
+    pending_block.send_replace(executed);
     flashblock_validation_metrics.record_into_executed_block(into_executed_block_started.elapsed());
 
     trace!(
